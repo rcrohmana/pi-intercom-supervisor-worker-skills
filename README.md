@@ -2,7 +2,7 @@
 
 Two companion Pi skills for running a safe supervisor/worker workflow across two local Pi sessions using **pi-intercom**.
 
-These skills are designed to be used together with **Nico's `pi-intercom` extension/package**. They do not replace `pi-intercom`; they provide the operating protocol that makes intercom-based delegation safer and more reliable.
+These skills are designed to be used together with **Nico Bailon's original [`pi-intercom`](https://github.com/nicobailon/pi-intercom) extension/package**. They do not replace `pi-intercom`; they provide the operating protocol that makes intercom-based delegation safer and more reliable.
 
 ## Skills
 
@@ -34,7 +34,7 @@ Responsibilities:
 
 ## Required dependency
 
-Install and enable Nico's `pi-intercom` package first.
+Install and enable Nico Bailon's original [`pi-intercom`](https://github.com/nicobailon/pi-intercom) package first.
 
 Example Pi settings package entry:
 
@@ -126,5 +126,5 @@ Then start two Pi sessions and activate the relevant skill in each session.
 
 - These skills are prompt/protocol skills only.
 - They do not modify `pi-intercom` internals.
-- They are intended for same-machine Pi sessions connected through Nico's `pi-intercom`.
+- They are intended for same-machine Pi sessions connected through Nico Bailon's [`pi-intercom`](https://github.com/nicobailon/pi-intercom).
 - For long or ambiguous work, keep tasks bounded and use progress checkpoints.
