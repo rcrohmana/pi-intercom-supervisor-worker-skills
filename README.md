@@ -1,8 +1,8 @@
 # Pi Intercom Supervisor/Worker Skills
 
-Two companion Pi skills for running a safe supervisor/worker workflow across two local Pi sessions using **pi-intercom**.
+Two companion skills for running a safe supervisor/worker workflow across two local [Pi](https://github.com/badlogic/pi-mono) sessions using **pi-intercom**.
 
-These skills are designed to be used together with **Nico Bailon's original [`pi-intercom`](https://github.com/nicobailon/pi-intercom) extension/package**. They do not replace `pi-intercom`; they provide the operating protocol that makes intercom-based delegation safer and more reliable.
+These skills are designed for [Pi](https://github.com/badlogic/pi-mono) and are meant to be used together with **Nico Bailon's original [`pi-intercom`](https://github.com/nicobailon/pi-intercom) extension/package**. They do not replace `pi-intercom`; they provide the operating protocol that makes intercom-based delegation safer and more reliable.
 
 ## Skills
 
@@ -121,6 +121,10 @@ Copy the skill directories into your Pi user skills directory:
 ```
 
 Then start two Pi sessions and activate the relevant skill in each session.
+
+## Acknowledgements
+
+Thanks to the [Pi / pi-mono](https://github.com/badlogic/pi-mono) project for the coding-agent platform and to Nico Bailon for the original [`pi-intercom`](https://github.com/nicobailon/pi-intercom) extension that enables same-machine session coordination.
 
 ## Notes
 
