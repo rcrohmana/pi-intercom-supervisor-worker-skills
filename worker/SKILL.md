@@ -102,6 +102,20 @@ Exploration notes, partial method reasoning, or a draft plan are not valid final
 
 If an `ask` times out or fails, do not treat the task as accepted. Send a non-blocking status update to the supervisor with the timeout/error and wait for renewed instructions from the boss/user.
 
+### Chained Task in Supervisor Reply
+
+A supervisor `reply` can contain more than an acceptance/rejection. If the reply includes a new task, rework, recovery, or proceed instruction, treat that instruction as a delegated task immediately.
+
+Trigger phrases include: `Next task:`, `Task:`, `Rework required:`, `Recovery required:`, `Proceed`, `Create`, `Implement`, `Verify`, `Review`, or `Continue with`.
+
+When this happens:
+
+1. Do not only acknowledge receipt.
+2. Restate the new task internally: goal, mode, scope, constraints, acceptance criteria.
+3. Start executing with tool calls if the task is clear.
+4. If unclear, send `intercom({ action: "ask", to: "supervisor", message: "Clarification needed: ..." })`.
+5. Finish using the Intercom Turn Contract.
+
 ## Communication Protocol
 
 ### Acknowledging a Task
@@ -225,3 +239,4 @@ If any of these happens, do not produce a normal final answer. Use the Intercom 
 | Hiding failed checks | Report failures honestly |
 | Sending many blocking asks | One clear `ask`; use `send` for progress |
 | Ending delegated work with normal final text | Use `ask` for complete/blocked, or `send` progress and continue |
+| Supervisor reply contains `Next task:` but you only acknowledge | Treat it as a new delegated task and start executing |

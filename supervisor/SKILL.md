@@ -124,6 +124,42 @@ intercom({ action: "reply", message: "<answer or next instruction>" })
 
 If the answer requires boss approval, do not reply with a decision yet. Ask the boss first, then reply.
 
+### Accepting Work and Delegating the Next Task
+
+Prefer a two-step handoff after a worker completion report:
+
+1. Use `reply` only to accept/reject the completed task.
+2. Use a separate `send` message for the next delegated task with the full task template and completion contract.
+
+This avoids the worker treating a large next-task instruction as only a reply to the previous `ask`.
+
+```typescript
+intercom({
+  action: "reply",
+  message: "Section 02 accepted. Stand by for the next task."
+})
+
+intercom({
+  action: "send",
+  to: "worker",
+  message: `Task: Section 03 only
+Goal: <desired outcome>
+Mode: implement
+Scope: <target file and allowed sources>
+Constraints: do not proceed to Section 04 before supervisor review
+Acceptance criteria:
+- <criterion 1>
+Verification required:
+- <checks>
+Completion contract:
+- If complete, ask supervisor with prefix "Task complete:" and evidence.
+- If blocked, ask supervisor with prefix "Blocked:".
+- Do not stop with a normal final message.`
+})
+```
+
+If you intentionally include the next task inside a `reply`, explicitly say: `This reply contains your next delegated task. Start executing now; do not only acknowledge.`
+
 ### Requesting Rework
 
 ```typescript
@@ -200,6 +236,7 @@ Do not claim final project completion unless you have fresh verification evidenc
 | Waiting on `ask` during long work | Use `send` and let worker report back |
 | Sending delegation without completion contract | Include complete/blocked/progress reporting rules |
 | Treating local-only worker text as completion | Require an intercom completion report with evidence |
+| Putting acceptance and next task in one `reply` | Prefer `reply` acceptance, then separate `send` for next task |
 | Trusting report blindly | Validate evidence and request gaps |
 | Replying without thread context | Use `reply` for inbound asks |
 | Letting worker continue while blocked | Give a clear decision or ask boss |
