@@ -126,6 +126,10 @@ Then start two Pi sessions and activate the relevant skill in each session.
 
 Thanks to the [Pi / pi-mono](https://github.com/badlogic/pi-mono) project for the coding-agent platform and to Nico Bailon for the original [`pi-intercom`](https://github.com/nicobailon/pi-intercom) extension that enables same-machine session coordination.
 
+## License
+
+MIT License. See [LICENSE](LICENSE).
+
 ## Notes
 
 - These skills are prompt/protocol skills only.
