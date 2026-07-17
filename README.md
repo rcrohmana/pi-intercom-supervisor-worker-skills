@@ -1,138 +1,237 @@
 # Pi Intercom Supervisor/Worker Skills
 
-Two companion skills for running a safe supervisor/worker workflow across two local [Pi](https://github.com/badlogic/pi-mono) sessions using **pi-intercom**.
+Two companion [Pi](https://github.com/badlogic/pi-mono) skills for coordinating a persistent supervisor and worker across local sessions.
 
-These skills are designed for [Pi](https://github.com/badlogic/pi-mono) and are meant to be used together with **Nico Bailon's original [`pi-intercom`](https://github.com/nicobailon/pi-intercom) extension/package**. They do not replace `pi-intercom`; they provide the operating protocol that makes intercom-based delegation safer and more reliable.
+The skills use structured work leases provided by the [`rcrohmana/pi-intercom`](https://github.com/rcrohmana/pi-intercom) fork. A lease gives delegated work an explicit lifecycle and lets the extension wake a worker that settles before reporting a terminal result. This is especially useful when GPT-5.6 Terra is selected as the worker model.
 
-## Skills
+## What each skill does
 
 ### `supervisor`
 
-Use in the planner/supervisor Pi session.
+The supervisor keeps the overall objective and delegates bounded tasks. It:
 
-Responsibilities:
-
-- Keep the main objective, scope, constraints, and acceptance criteria clear.
-- Delegate bounded tasks to a worker through `pi-intercom`.
-- Require completion/blocker reports through intercom, not local-only final text.
-- Validate worker evidence before accepting results.
-- Escalate important product, architecture, dependency, git, destructive, security, or verification-bypass decisions to the human boss.
-- Recover safely if the worker stops without a completion/blocker report.
+- defines the goal, scope, constraints, acceptance criteria, and verification;
+- starts executable work with `delegate`;
+- avoids routine acknowledgements and manual `continue` messages;
+- reviews and independently verifies completion evidence;
+- uses the same work ID with `resume` when rework is required;
+- escalates important decisions to the human boss.
 
 ### `worker`
 
-Use in the worker Pi session.
+The worker executes continuously under the active lease. It:
 
-Responsibilities:
+- stays within the delegated scope;
+- continues concrete work after meaningful progress reports;
+- requests decisions only when safe execution genuinely depends on an answer;
+- reports a real external blocker through `blocked`;
+- runs fresh verification before using `complete`;
+- never treats an empty response as a completion signal.
 
-- Receive tasks from the supervisor through `pi-intercom`.
-- Stay within the assigned mode and scope.
-- Ask the supervisor when requirements are unclear or decisions are needed.
-- Report progress for long-running work.
-- Verify before claiming completion.
-- End delegated work through intercom, not with normal local final text.
+## Requirements
 
-## Required dependency
+Install a version of [`rcrohmana/pi-intercom`](https://github.com/rcrohmana/pi-intercom) that includes structured work leases. Both Pi sessions must expose the `intercom` tool with these actions:
 
-Install and enable Nico Bailon's original [`pi-intercom`](https://github.com/nicobailon/pi-intercom) package first.
-
-Example Pi settings package entry:
-
-```json
-{
-  "packages": [
-    "npm:pi-intercom"
-  ]
-}
-```
-
-Both sessions should have access to the `intercom` tool.
-
-## Recommended terminal setup
-
-Open two Pi sessions in the same machine:
-
-```text
-Terminal 1: /name supervisor  then /skill:supervisor
-Terminal 2: /name worker      then /skill:worker
-```
-
-Both sessions should check connectivity:
-
-```typescript
-intercom({ action: "status" })
-intercom({ action: "list" })
-```
-
-Expected default targets:
-
-- `supervisor` sends tasks to `worker`
-- `worker` reports back to `supervisor`
-
-## Core protocol
-
-The supervisor delegates using `send`, but every task must include a completion contract.
-
-The worker must not stop with ordinary final text for delegated work. It must use one of these intercom actions:
-
-| Situation | Required worker action |
+| Action | Purpose |
 |---|---|
-| Complete | `intercom({ action: "ask", to: "supervisor", message: "Task complete: ..." })` |
-| Blocked / unclear | `intercom({ action: "ask", to: "supervisor", message: "Blocked: ..." })` |
-| Decision needed | `intercom({ action: "ask", to: "supervisor", message: "Decision needed: ..." })` |
-| Still working | `intercom({ action: "send", to: "supervisor", message: "Progress: ..." })`, then continue working |
+| `delegate` | Start a bounded work lease |
+| `progress` | Report a meaningful milestone and keep working |
+| `complete` | End the lease after verification |
+| `blocked` | Pause for a genuine external blocker |
+| `resume` | Reactivate the same work ID for reviewed rework |
+| `cancel` | Stop delegated work |
 
-This avoids silent or local-only worker stops during long delegated tasks.
-
-## Safe delegation template
-
-```typescript
-intercom({
-  action: "send",
-  to: "worker",
-  message: `Task: <short title>
-Goal: <desired outcome>
-Mode: <investigate-only | implement | verify | review>
-Context: <important background>
-Scope: <files/areas allowed>
-Constraints: <what not to change>
-Acceptance criteria:
-- <criterion 1>
-- <criterion 2>
-Verification required:
-- <commands or checks>
-Checkpoint guidance: <when to send progress>
-Completion contract:
-- If complete, your final action must be intercom ask to supervisor with prefix "Task complete:" and evidence.
-- If blocked, unclear, or a decision is needed, your final action must be intercom ask to supervisor with prefix "Blocked:" or "Decision needed:".
-- If still working on a long task, send progress to supervisor with prefix "Progress:", then continue working.
-- Do not stop with a normal final message or method notes only.
-Report back with: summary, files changed/inspected, verification output, risks, questions.`
-})
-```
+Generic `send` is still appropriate for ordinary messages. Use blocking `ask` only when a decision must be answered before the worker can proceed safely.
 
 ## Installation
 
-Copy the skill directories into your Pi user skills directory:
+Clone this repository:
+
+```bash
+git clone https://github.com/rcrohmana/pi-intercom-supervisor-worker-skills.git
+```
+
+Then either copy the skill directories into Pi's global skill directory:
 
 ```text
 ~/.pi/agent/skills/supervisor/SKILL.md
 ~/.pi/agent/skills/worker/SKILL.md
 ```
 
-Then start two Pi sessions and activate the relevant skill in each session.
+or add both directories to the `skills` array in `~/.pi/agent/settings.json`:
+
+```json
+{
+  "skills": [
+    "/absolute/path/pi-intercom-supervisor-worker-skills/supervisor",
+    "/absolute/path/pi-intercom-supervisor-worker-skills/worker"
+  ]
+}
+```
+
+Restart Pi or reload the affected sessions after installation.
+
+## Session setup
+
+Open two Pi sessions on the same machine:
+
+```text
+Terminal 1: /name supervisor  then /skill:supervisor
+Terminal 2: /name worker      then /skill:worker
+```
+
+Check connectivity from both sessions:
+
+```typescript
+intercom({ action: "status" })
+intercom({ action: "list" })
+```
+
+The examples below use `supervisor` and `worker` as the session names.
+
+## Structured workflow
+
+### 1. Delegate bounded work
+
+From the supervisor session:
+
+```typescript
+intercom({
+  action: "delegate",
+  to: "worker",
+  message: `Task: Add bounded retry handling
+Goal: Prevent premature task termination without changing providers.
+Mode: implement
+Context: The worker may settle after a tool result.
+Scope: src/retry.ts and its tests
+Constraints: Do not add dependencies or change public APIs.
+Acceptance criteria:
+- Retry state is bounded.
+- Terminal states stop retries.
+Verification required:
+- npm test
+Report complete with summary, changed paths, exact verification output, risks, and questions.`
+})
+```
+
+The tool result includes a `workId`. Keep it for rework or cancellation. The supervisor should not send routine acknowledgements when the worker reports progress.
+
+### 2. Report progress without stopping
+
+From the worker session:
+
+```typescript
+intercom({
+  action: "progress",
+  message: "Focused regression is green. Continuing with the full suite and diff review."
+})
+```
+
+After this call, the worker continues with the next concrete non-intercom tool action.
+
+### 3. Request a blocking decision
+
+Use `ask` only when no safe path remains without supervisor input:
+
+```typescript
+intercom({
+  action: "ask",
+  to: "supervisor",
+  message: `Decision needed: retry storage
+Context: The existing API supports memory or disk persistence.
+Options:
+A) Keep memory-only state and preserve restart behavior.
+B) Add disk persistence and a migration path.
+Recommendation: A, because persistence is outside the delegated scope.
+Blocking: Choosing either option changes the implementation boundary.`
+})
+```
+
+The supervisor answers with `reply`. Once answered, the worker resumes concrete work rather than sending an acknowledgement.
+
+### 4. Complete with evidence
+
+From the worker session:
+
+```typescript
+intercom({
+  action: "complete",
+  message: `Task complete: bounded retry handling
+Summary: Added an in-memory bounded retry controller.
+Files changed: src/retry.ts, src/retry.test.ts
+Verification:
+- npm test: 42 passed, 0 failed
+Risks/notes: Retry state intentionally resets after process restart.
+Ready for supervisor review.`
+})
+```
+
+If delivery fails, the lease remains active. The supervisor independently checks the files and reruns required verification before accepting the result.
+
+### 5. Resume reviewed rework
+
+If verification finds a gap, the supervisor reuses the original work ID:
+
+```typescript
+intercom({
+  action: "resume",
+  to: "worker",
+  workId: "<original-work-id>",
+  message: `Rework required:
+Issue: The continuation cap is not covered by a boundary test.
+Expected: Add a test for the exact maximum and the first rejected continuation.
+Keep: Existing public behavior.
+Verification: npm test`
+})
+```
+
+A distinct task should receive a new `delegate` call rather than being appended to an old lease.
+
+### 6. Report a real blocker
+
+From the worker session:
+
+```typescript
+intercom({
+  action: "blocked",
+  message: `Blocked: repository permission
+What I tried: git push origin master
+Evidence: remote rejected the authenticated user.
+Needed from supervisor: repository access or an approved alternate remote.`
+})
+```
+
+Unfinished implementation, an expected failing test, formatting work, or needing more time are not blockers.
+
+### 7. Cancel work
+
+From the supervisor session:
+
+```typescript
+intercom({
+  action: "cancel",
+  to: "worker",
+  workId: "<work-id>",
+  message: "Stop this task; the requirements changed."
+})
+```
+
+## Runtime safety
+
+The companion pi-intercom extension owns lifecycle continuation:
+
+- a settled active lease triggers an automatic continuation turn;
+- two consecutive settled runs without concrete non-intercom tool progress stall safely;
+- fifty automatic continuations also stall safely;
+- `complete`, `blocked`, `cancel`, shutdown, or session replacement stops continuation;
+- leases are held in memory and do not automatically survive a Pi process restart.
+
+These guards complement the skills. They do not replace clear task boundaries, independent verification, or human approval for important decisions.
 
 ## Acknowledgements
 
-Thanks to the [Pi / pi-mono](https://github.com/badlogic/pi-mono) project for the coding-agent platform and to Nico Bailon for the original [`pi-intercom`](https://github.com/nicobailon/pi-intercom) extension that enables same-machine session coordination.
+Thanks to the [Pi / pi-mono](https://github.com/badlogic/pi-mono) project for the coding-agent platform and to Nico Bailon for the original [`pi-intercom`](https://github.com/nicobailon/pi-intercom) extension.
 
 ## License
 
 MIT License. See [LICENSE](LICENSE).
-
-## Notes
-
-- These skills are prompt/protocol skills only.
-- They do not modify `pi-intercom` internals.
-- They are intended for same-machine Pi sessions connected through Nico Bailon's [`pi-intercom`](https://github.com/nicobailon/pi-intercom).
-- For long or ambiguous work, keep tasks bounded and use progress checkpoints.
